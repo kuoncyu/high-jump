@@ -3,136 +3,163 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>專業跳高裁判系統 V13</title>
+    <title>專業跳高裁判系統 V22</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        /* 基礎設定 */
-        body { padding-bottom: 280px; background-color: #f4f6f8; user-select: none; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; touch-action: manipulation; }
+        /* --- 全局佈局 (Flex + 100dvh) --- */
+        html, body { 
+            height: 100%; margin: 0; padding: 0; 
+            overflow: hidden; background-color: #f4f6f8; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; 
+            touch-action: manipulation; 
+        }
+
+        /* 設定頁面 (可捲動) */
+        #setupContainer { height: 100%; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: 50px; }
+
+        /* 主畫面 (Flex Column) */
+        #mainPanel {
+            display: flex; flex-direction: column;
+            height: 100dvh; width: 100%; overflow: hidden;
+        }
+
+        /* A. 上方固定區 (HUD) */
+        .top-fixed-area {
+            flex: 0 0 auto; background-color: #f4f6f8;
+            padding: 8px 8px 6px 8px; z-index: 100;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        /* B. 中間表格 (捲動區) */
+        .scrollable-table-area {
+            flex: 1 1 auto; overflow: auto; position: relative; background: white;
+        }
+
+        /* C. 底部按鈕區 (固定) */
+        .bottom-fixed-area {
+            flex: 0 0 auto; background-color: #fff;
+            box-shadow: 0 -4px 15px rgba(0,0,0,0.1);
+            padding: 10px; z-index: 200;
+            border-top: 1px solid #dee2e6;
+        }
+
+        /* --- 表格樣式 --- */
+        table { border-collapse: separate; border-spacing: 0; width: 100%; margin-bottom: 0; }
+        th, td { 
+            height: 48px; vertical-align: middle; text-align: center; padding: 0;
+            border-bottom: 1px solid #e0e0e0; border-right: 1px solid #e0e0e0;
+            white-space: nowrap; box-sizing: border-box;
+        }
+        th:not(.sticky-col), td:not(.sticky-col) { min-width: 90px; max-width: 90px; }
+
+        /* 凍結窗格設定 */
+        thead th { position: sticky; top: 0; z-index: 50; background-color: #343a40; color: white; border-bottom: 2px solid #495057; box-shadow: 0 2px 2px rgba(0,0,0,0.1); }
         
-        /* 狀態圖示 */
-        .status-box { width: 30px; height: 30px; display: inline-block; text-align: center; line-height: 30px; border: 1px solid #ccc; margin-right: 2px; font-weight: bold; font-size: 15px; border-radius: 4px; }
+        .sticky-left { position: sticky; left: 0; z-index: 30; border-right: 2px solid #dee2e6 !important; min-width: 60px; max-width: 60px; }
+        thead th.sticky-left { z-index: 60; background-color: #212529; } 
+
+        .sticky-right-best { position: sticky; right: 45px; z-index: 30; border-left: 2px solid #dee2e6 !important; min-width: 65px; max-width: 65px; }
+        .sticky-right-rank { position: sticky; right: 0; z-index: 30; border-left: 1px solid #dee2e6; min-width: 45px; max-width: 45px; font-weight: bold; color: #dc3545; background-color: #f8f9fa; }
+        thead th.sticky-right-best, thead th.sticky-right-rank { z-index: 60; background-color: #212529; }
+
+        /* 行樣式 */
+        .row-active { background-color: #fff; }
+        .row-out { background-color: #ffe6e6; }
+        .row-dns { background-color: #f0f0f0; color: #aaa; }
+        .row-active .sticky-col:not(.sticky-right-rank) { background-color: #fff; }
+        .row-out .sticky-col:not(.sticky-right-rank) { background-color: #ffe6e6; }
+        .row-dns .sticky-col:not(.sticky-right-rank) { background-color: #f0f0f0; }
+
+        .status-box { width: 28px; height: 28px; display: inline-block; line-height: 28px; border: 1px solid #ccc; margin-right: 2px; font-weight: bold; font-size: 14px; border-radius: 4px; }
         .status-O { background-color: #d4edda; color: #155724; border-color: #c3e6cb; }
         .status-X { background-color: #f8d7da; color: #721c24; border-color: #f5c6cb; }
         .status-P { background-color: #fff3cd; color: #856404; border-color: #ffeeba; }
-        .status-R { background-color: #e2e3e5; color: #383d41; border-color: #d6d8db; }
-        
-        /* 表格容器 */
-        .table-container { 
-            overflow-x: auto; 
-            -webkit-overflow-scrolling: touch; 
-            background: white; 
-            border-radius: 8px; 
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            margin-bottom: 100px;
-            position: relative;
-        }
-        
-        table { border-collapse: separate; border-spacing: 0; width: 100%; }
-        
-        th, td { 
-            height: 60px; 
-            vertical-align: middle; 
-            text-align: center; 
-            padding: 4px;
-            border-bottom: 1px solid #dee2e6;
-            border-right: 1px solid #dee2e6;
-        }
+        .status-R { background-color: #6c757d; color: #fff; border-color: #6c757d; }
+        .cell-selected { border: 3px solid #0d6efd !important; background-color: #e7f1ff !important; position: relative; z-index: 15; }
 
-        /* 中間成績格固定寬度 */
-        th:not(.sticky-col-left):not(.sticky-col-right), 
-        td:not(.sticky-col-left):not(.sticky-col-right) {
-            min-width: 115px; 
-            max-width: 115px;
-            width: 115px;
+        /* --- 儀表板 & HUD --- */
+        .top-dashboard { display: flex; gap: 6px; justify-content: space-between; margin-bottom: 8px; }
+        .dash-card { flex: 1; background: #fff; border-radius: 6px; padding: 4px; text-align: center; border: 1px solid #dee2e6; }
+        .dash-card.highlight { background: #e7f1ff; border-color: #b6d4fe; }
+        .dash-label { font-size: 0.65rem; color: #6c757d; font-weight: bold; display: block; line-height: 1; margin-bottom: 2px; }
+        .dash-val { font-size: 1.1rem; font-weight: 900; color: #212529; line-height: 1.1; }
+        .dash-val-bib { color: #0d6efd; font-size: 1.3rem; } 
+
+        .hud-row { display: flex; align-items: center; justify-content: space-between; padding: 0 2px; height: 32px; }
+        .hud-next-info { 
+            flex: 1; text-align: center; 
+            font-size: 0.95rem; font-weight: bold; color: #495057; 
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; 
+            margin: 0 10px; background-color: #e9ecef; border-radius: 15px; padding: 2px 8px; 
         }
         
-        /* --- 左側凍結 (背號) --- */
-        .sticky-col-left { 
-            position: sticky; 
-            left: 0; 
-            z-index: 30;
-            border-right: 3px solid #dee2e6 !important; 
-            min-width: 70px; max-width: 70px;
-            box-shadow: 2px 0 5px rgba(0,0,0,0.05);
-            background-clip: padding-box; /* 修正邊框重疊問題 */
-        }
+        .control-btn-group { display: flex; gap: 4px; height: 50px; }
+        .btn-ctrl { flex: 1; font-size: 1.3rem; font-weight: 900; border-radius: 6px; border: none; box-shadow: 0 2px 0 rgba(0,0,0,0.1); color: white; transition: all 0.05s; }
+        .btn-ctrl:active { transform: translateY(2px); box-shadow: none; }
+        .btn-undo { flex: 0.6; background-color: #6c757d; font-size: 1rem; }
+        .btn-o { background-color: #198754; }
+        .btn-x { background-color: #dc3545; }
+        .btn-p { background-color: #ffc107; color: #000; }
+        .btn-r { background-color: #343a40; }
 
-        /* --- V13 新增：右側凍結 (最佳成績) --- */
-        .sticky-col-right {
-            position: sticky;
-            right: 0;
-            z-index: 30;
-            border-left: 3px solid #dee2e6 !important;
-            border-right: none !important;
-            min-width: 80px; max-width: 80px;
-            font-weight: bold;
-            box-shadow: -2px 0 5px rgba(0,0,0,0.05);
-            background-clip: padding-box;
-        }
-
-        /* 確保表頭背景色正確 */
-        thead th.sticky-col-left, thead th.sticky-col-right {
-            background-color: #212529; /* Bootstrap table-dark color */
-            color: white;
-            z-index: 40; /* 表頭層級最高 */
-        }
-
-        /* 選中特效 */
-        .cell-selected { 
-            border: 3px solid #0d6efd !important; 
-            background-color: #e7f1ff !important;
-            position: relative;
-            z-index: 15; 
-        }
-
-        /* 控制台樣式 */
-        .control-panel {
-            position: fixed; bottom: 0; left: 0; width: 100%;
-            background-color: #fff; box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
-            padding: 10px 10px 20px 10px; z-index: 1000;
-            border-top: 1px solid #dee2e6;
-            display: flex; flex-direction: column; gap: 8px;
-        }
-        .dashboard-row { display: flex; gap: 8px; justify-content: space-between; margin-bottom: 5px; }
-        .dash-card { flex: 1; background: #f8f9fa; border-radius: 8px; padding: 5px; text-align: center; border: 1px solid #e9ecef; }
-        .dash-label { font-size: 0.75rem; color: #6c757d; font-weight: bold; display: block; margin-bottom: 2px; }
-        .dash-val { font-size: 1.2rem; font-weight: 900; color: #212529; line-height: 1.2; }
-        .dash-val-bib { color: #0d6efd; font-size: 1.4rem; } 
+        /* --- 數字鍵盤 V20 優化版 --- */
+        .height-generator { background-color: #e9ecef; border-radius: 12px; padding: 12px; margin-top: 15px; border: 1px solid #dee2e6; }
         
-        .btn-set-start { width: 100%; background-color: #e7f1ff; color: #0d6efd; border: 1px dashed #0d6efd; border-radius: 6px; padding: 4px; font-weight: bold; font-size: 0.9rem; margin-bottom: 4px; }
-        .btn-set-start:disabled { background: #f8f9fa; border-color: #dee2e6; color: #adb5bd; }
+        .keypad-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; width: 100%; max-width: 500px; margin: 0 auto; }
+        .keypad-btn { height: 85px; font-size: 2.2rem; font-weight: bold; border-radius: 16px; border: 1px solid #dee2e6; background: white; color: #212529; box-shadow: 0 4px 0 rgba(0,0,0,0.05); transition: all 0.1s; }
+        .keypad-btn:active { background: #e9ecef; box-shadow: 0 1px 0 rgba(0,0,0,0.05); transform: translateY(3px); }
+        .btn-backspace { grid-column: span 2; background-color: #dc3545; color: white; border-color: #dc3545; display: flex; align-items: center; justify-content: center; }
+        .btn-backspace:active { background-color: #b02a37; }
+        .btn-backspace svg { width: 40px; height: 40px; fill: currentColor; }
 
-        .control-btn-group { display: flex; gap: 6px; height: 55px; }
-        .btn-ctrl { flex: 1; font-size: 1.4rem; font-weight: 900; border-radius: 10px; border: none; box-shadow: 0 4px 0 rgba(0,0,0,0.1); transition: transform 0.1s; }
-        .btn-ctrl:active { transform: translateY(4px); box-shadow: none; }
-        .btn-undo { flex: 0.6; background-color: #6c757d; color: white; font-size: 1rem; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.1; }
+        .input-wrapper { position: relative; width: 100%; max-width: 500px; margin: 0 auto 15px auto; }
+        .input-screen { font-size: 2.5rem; font-weight: bold; text-align: center; background: #fff; border: 3px solid #0d6efd; border-radius: 16px; height: 70px; line-height: 64px; }
+        .btn-reset-list { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); border: none; background: #ffe6e6; color: #dc3545; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; }
 
-        .dns-card { position: relative; cursor: pointer; }
-        .dns-checkbox:checked + label { color: #dc3545; font-weight: 900; }
-        .keypad-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; max-width: 320px; margin: 0 auto; }
-        .keypad-btn { height: 55px; font-size: 1.5rem; font-weight: 600; border-radius: 8px; border: 1px solid #dee2e6; background: white; }
-        .input-screen { font-size: 2rem; font-weight: bold; text-align: center; background: #fff; border: 2px solid #0d6efd; border-radius: 10px; height: 60px; line-height: 55px; margin-bottom: 10px; }
     </style>
 </head>
 <body>
 
-<div class="container-fluid p-0 p-sm-3">
-    
-    <div id="setupPanel" class="card p-3 shadow-sm mx-auto mt-3" style="max-width: 600px;">
-        <h4 class="text-center fw-bold mb-3">🏆 跳高裁判系統 V13</h4>
-        <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-3">
-            <span class="fs-5 fw-bold">選手人數</span>
-            <div class="input-group" style="width: 140px;">
-                <button class="btn btn-outline-secondary fw-bold" onclick="adjCount(-1)">－</button>
-                <input type="number" id="athleteCount" class="form-control text-center fw-bold fs-5" value="10" readonly>
-                <button class="btn btn-outline-secondary fw-bold" onclick="adjCount(1)">＋</button>
+<div id="setupContainer" class="container-fluid p-3">
+    <div id="setupPanel" class="mx-auto" style="max-width: 600px;">
+        <h3 class="text-center fw-bold mb-4">🏆 跳高裁判 V22</h3>
+        
+        <div class="card p-3 shadow-sm mb-4 border-0">
+            <div class="d-flex justify-content-between align-items-center">
+                <span class="fs-4 fw-bold">選手人數</span>
+                <div class="input-group" style="width: 160px;">
+                    <button class="btn btn-outline-secondary fw-bold fs-4" onclick="adjCount(-1)" style="width:50px;">－</button>
+                    <input type="number" id="athleteCount" class="form-control text-center fw-bold fs-4" value="10" readonly>
+                    <button class="btn btn-outline-secondary fw-bold fs-4" onclick="adjCount(1)" style="width:50px;">＋</button>
+                </div>
             </div>
         </div>
-        <div class="mb-2 text-center text-muted small">輸入高度 (例: 145)</div>
-        <div class="input-screen" id="inputDisplay"><span class="text-muted fs-4 fw-normal">等待輸入...</span></div>
+
         <div class="d-flex flex-wrap gap-2 justify-content-center mb-3 p-2 bg-light rounded" id="heightPreview" style="min-height:50px;">
-            <span class="text-muted small align-self-center">尚未設定高度</span>
+            <span class="text-muted small align-self-center fs-5">請輸入起跳高度...</span>
         </div>
+
+        <div id="smartAddSection" class="height-generator d-none mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <span class="fw-bold text-secondary fs-5">每階增加 (cm):</span>
+                <div class="d-flex align-items-center bg-white rounded border p-1">
+                    <button class="btn btn-light" onclick="adjInc(-1)" style="width:40px;height:40px;font-weight:bold;font-size:1.5rem">-</button>
+                    <input type="text" id="incVal" value="5" readonly style="width:60px;text-align:center;border:none;font-weight:bold;font-size:1.5rem">
+                    <button class="btn btn-light" onclick="adjInc(1)" style="width:40px;height:40px;font-weight:bold;font-size:1.5rem">+</button>
+                </div>
+            </div>
+            <button class="btn btn-success w-100 fw-bold shadow-sm p-3 fs-5" onclick="addNextHeight()">＋ 新增下一階 (<span id="nextHeightPreview">--</span>)</button>
+        </div>
+
+        <div class="text-center text-muted mb-2 fw-bold">手動輸入 (例: 135)</div>
+        
+        <div class="input-wrapper">
+            <div class="input-screen" id="inputDisplay"><span class="text-muted fw-normal" style="font-size:1.5rem">等待輸入...</span></div>
+            <button class="btn-reset-list shadow-sm" onclick="clearHeights()" title="清空">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5Zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5Zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6Z"/><path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1ZM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118ZM2.5 3h11V2h-11v1Z"/></svg>
+            </button>
+        </div>
+
         <div class="keypad-grid">
             <button class="btn keypad-btn" onclick="pressKey('1')">1</button>
             <button class="btn keypad-btn" onclick="pressKey('2')">2</button>
@@ -143,62 +170,67 @@
             <button class="btn keypad-btn" onclick="pressKey('7')">7</button>
             <button class="btn keypad-btn" onclick="pressKey('8')">8</button>
             <button class="btn keypad-btn" onclick="pressKey('9')">9</button>
-            <button class="btn keypad-btn" style="visibility:hidden"> </button>
             <button class="btn keypad-btn" onclick="pressKey('0')">0</button>
-            <button class="btn btn-danger keypad-btn text-white" onclick="pressKey('back')">⌫</button>
+            <button class="btn keypad-btn btn-backspace" onclick="pressKey('back')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"></path><line x1="18" y1="9" x2="12" y2="15"></line><line x1="12" y1="9" x2="18" y2="15"></line></svg>
+            </button>
         </div>
-        <button class="btn btn-primary btn-lg w-100 fw-bold py-3 mt-4" onclick="goToStep2()">下一步</button>
+        <button class="btn btn-primary btn-lg w-100 fw-bold py-3 mt-4 fs-3 shadow" onclick="goToStep2()">下一步 ➡</button>
     </div>
 
     <div id="dnsPanel" class="card p-3 shadow-sm d-none mx-auto mt-3" style="max-width: 800px;">
-        <div class="alert alert-warning text-center fw-bold">點擊勾選未出賽 (DNS) 選手</div>
-        <div id="dnsList" class="row g-2 mb-4"></div>
+        <div class="alert alert-warning text-center fw-bold fs-5">點擊勾選未出賽 (DNS) 選手</div>
+        <div id="dnsList" class="row g-3 mb-4"></div>
         <div class="d-flex justify-content-between">
-            <button class="btn btn-secondary btn-lg" onclick="backToSetup()">返回</button>
-            <button class="btn btn-success btn-lg" onclick="startCompetition()">開始比賽 🏁</button>
-        </div>
-    </div>
-
-    <div id="mainPanel" class="d-none">
-        <div class="d-flex justify-content-between align-items-center mb-2 px-2 pt-2">
-            <button class="btn btn-warning btn-sm fw-bold" onclick="openAddHeightModal()">+ 高度</button>
-            <div class="fs-6 fw-bold">場上: <span id="activeCount" class="text-success">0</span> 人</div>
-            <button class="btn btn-info btn-sm text-white fw-bold" onclick="showRanking()">排名 📊</button>
-        </div>
-
-        <div class="table-container">
-            <table class="table mb-0" id="scoreTable">
-                <thead class="table-dark">
-                    </thead>
-                <tbody id="scoreBody"></tbody>
-            </table>
+            <button class="btn btn-secondary btn-lg px-4" onclick="backToSetup()">返回</button>
+            <button class="btn btn-success btn-lg px-5 fw-bold" onclick="startCompetition()">開始比賽 🏁</button>
         </div>
     </div>
 </div>
 
-<div id="controlPanel" class="control-panel d-none">
-    <div class="dashboard-row">
-        <div class="dash-card">
-            <span class="dash-label">目前高度</span>
-            <span class="dash-val" id="dashHeight">--</span>
+<div id="mainPanel" class="d-none">
+    
+    <div class="top-fixed-area">
+        <div class="top-dashboard">
+            <div class="dash-card highlight" style="flex:1.2">
+                <span class="dash-label">選手背號</span>
+                <span class="dash-val dash-val-bib" id="dashBib">--</span>
+            </div>
+            <div class="dash-card">
+                <span class="dash-label">目前高度</span>
+                <span class="dash-val" id="dashHeight">--</span>
+            </div>
+            <div class="dash-card">
+                <span class="dash-label">第幾跳</span>
+                <span class="dash-val" id="dashAttempt" style="color:#dc3545">--</span>
+            </div>
         </div>
-        <div class="dash-card" style="background: #e7f1ff; border-color: #b6d4fe;">
-            <span class="dash-label">選手背號</span>
-            <span class="dash-val dash-val-bib" id="dashBib">--</span>
-        </div>
-        <div class="dash-card">
-            <span class="dash-label">第幾跳</span>
-            <span class="dash-val" id="dashAttempt">--</span>
+        <div class="hud-row">
+            <button class="btn btn-warning btn-sm fw-bold shadow-sm" style="flex-shrink:0; width: auto;" onclick="openAddHeightModal()">+ 高度</button>
+            <div id="headerNextInfo" class="hud-next-info"></div>
+            <div class="fs-6 fw-bold text-secondary" style="flex-shrink:0;">存活: <span id="activeCount" class="text-success fs-5">0</span></div>
         </div>
     </div>
-    <button id="btnSetStart" class="btn-set-start" onclick="openStartHeightModalFromControl()" disabled>
-        📍 設定此為起跳高度
-    </button>
-    <div class="control-btn-group">
-        <button class="btn btn-success btn-ctrl" onclick="submitResult('O')">O</button>
-        <button class="btn btn-danger btn-ctrl" onclick="submitResult('X')">X</button>
-        <button class="btn btn-warning btn-ctrl" onclick="submitResult('-')">-</button>
-        <button class="btn btn-undo btn-ctrl" onclick="undoResult()">⎌<br><small>倒退</small></button>
+
+    <div class="scrollable-table-area">
+        <table id="scoreTable">
+            <thead></thead>
+            <tbody id="scoreBody"></tbody>
+        </table>
+        <div style="height: 20px;"></div>
+    </div>
+
+    <div class="bottom-fixed-area" id="controlPanel">
+        <div class="control-btn-group">
+            <button class="btn btn-o btn-ctrl" onclick="submitResult('O')">O</button>
+            <button class="btn btn-x btn-ctrl" onclick="submitResult('X')">X</button>
+            <button class="btn btn-p btn-ctrl" onclick="submitResult('-')">-</button>
+            <button class="btn btn-r btn-ctrl" onclick="submitResult('r')">r</button>
+            <button class="btn btn-undo btn-ctrl" onclick="undoResult()">⎌</button>
+        </div>
+        <div class="text-center mt-2">
+            <button id="btnSetStart" class="btn btn-sm btn-outline-primary w-100" onclick="openStartHeightModalFromControl()" disabled>📍 設定此為起跳高度</button>
+        </div>
     </div>
 </div>
 
@@ -217,28 +249,9 @@
     </div>
 </div>
 
-<div class="modal fade" id="rankingModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-light">
-                <h5 class="modal-title fw-bold">📊 目前排名</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body p-0">
-                <table class="table table-striped mb-0">
-                    <thead class="table-secondary"><tr><th>名次</th><th>背號</th><th>最佳</th><th>狀態</th></tr></thead>
-                    <tbody id="rankingBody"></tbody>
-                </table>
-            </div>
-            <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">關閉</button></div>
-        </div>
-    </div>
-</div>
-
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-    // --- 音效系統 ---
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     function playTone(freq, type, duration) {
         if(audioCtx.state === 'suspended') audioCtx.resume();
@@ -258,6 +271,7 @@
             case 'O': playTone(880, 'sine', 0.15); break;
             case 'X': playTone(150, 'sawtooth', 0.3); break;
             case '-': playTone(440, 'triangle', 0.1); break;
+            case 'r': playTone(200, 'square', 0.4); break;
             case 'undo': playTone(600, 'square', 0.1); setTimeout(()=>playTone(300, 'square', 0.1), 80); break;
         }
     }
@@ -267,10 +281,9 @@
     let inputBuffer = "";
     let selectedAthleteId = null;
     let selectedHeight = null;
+    let incrementVal = 5;
     let startHeightModalObj = null;
-    let rankingModalObj = null;
 
-    // --- 輸入邏輯 ---
     function adjCount(n) {
         let el = document.getElementById('athleteCount');
         let val = parseInt(el.value) + n;
@@ -285,47 +298,68 @@
         } else {
             if (inputBuffer.length < 3) inputBuffer += key;
         }
-        if (inputBuffer.length === 0) displayEl.innerHTML = '<span class="text-muted fs-4 fw-normal">等待輸入...</span>';
+        if (inputBuffer.length === 0) displayEl.innerHTML = '<span class="text-muted fw-normal" style="font-size:1.5rem">等待輸入...</span>';
         else if (inputBuffer.length === 3) {
             let val = inputBuffer[0] + "." + inputBuffer.substring(1);
-            heightList.push(val);
+            addHeightToList(val);
             inputBuffer = "";
-            displayEl.innerHTML = '<span class="text-muted fs-4 fw-normal">等待輸入...</span>';
-            renderHeightPreview();
+            displayEl.innerHTML = '<span class="text-muted fw-normal" style="font-size:1.5rem">等待輸入...</span>';
         } else {
             displayEl.innerText = inputBuffer.length === 2 ? inputBuffer[0]+"."+inputBuffer[1] : inputBuffer;
         }
     }
+    function addHeightToList(valStr) {
+        if(!heightList.includes(valStr)) {
+            heightList.push(valStr);
+            heightList.sort((a,b)=>parseFloat(a)-parseFloat(b));
+            renderHeightPreview();
+        }
+    }
+    function clearHeights() { 
+        if(confirm("確定清空？")) { heightList = []; inputBuffer=""; document.getElementById('inputDisplay').innerHTML='...'; renderHeightPreview(); } 
+    }
+    function adjInc(n) {
+        incrementVal += n; if(incrementVal < 1) incrementVal = 1;
+        document.getElementById('incVal').value = incrementVal;
+        updateNextHeightPreview();
+    }
+    function updateNextHeightPreview() {
+        let previewEl = document.getElementById('nextHeightPreview');
+        if (heightList.length === 0) { previewEl.innerText = "--"; return; }
+        let lastH = parseFloat(heightList[heightList.length - 1]);
+        let nextH = lastH + (incrementVal / 100);
+        previewEl.innerText = nextH.toFixed(2);
+    }
+    function addNextHeight() {
+        if (heightList.length === 0) return alert("請先輸入起跳高度！");
+        let lastH = parseFloat(heightList[heightList.length - 1]);
+        let nextH = lastH + (incrementVal / 100);
+        addHeightToList(nextH.toFixed(2));
+    }
     function renderHeightPreview() {
         let box = document.getElementById('heightPreview');
-        box.innerHTML = heightList.length ? heightList.map(h => `<span class="badge bg-secondary fs-6">${h}</span>`).join(' ') : '<span class="text-muted small align-self-center">尚未設定高度</span>';
+        let smartSection = document.getElementById('smartAddSection');
+        box.innerHTML = heightList.length ? heightList.map(h => `<span class="badge bg-secondary fs-5 m-1">${h}</span>`).join('') : '<span class="text-muted small align-self-center fs-5">請輸入起跳高度...</span>';
+        if (heightList.length > 0) { smartSection.classList.remove('d-none'); updateNextHeightPreview(); } else { smartSection.classList.add('d-none'); }
     }
 
-    // --- 初始化流程 ---
     function goToStep2() {
         if (!heightList.length) return alert("請至少輸入一個高度！");
-        heightList.sort((a,b)=>parseFloat(a)-parseFloat(b));
-        heightList = [...new Set(heightList)];
         let html = '';
         let count = parseInt(document.getElementById('athleteCount').value);
         for(let i=1; i<=count; i++) {
-            html += `<div class="col-3 col-md-2"><div class="dns-card form-check p-2 border rounded bg-white text-center" onclick="toggleDNS(${i})">
-                <input class="form-check-input dns-checkbox" type="checkbox" value="${i}" id="dns_${i}">
-                <label class="d-block fw-bold mt-1" for="dns_${i}">#${i}</label>
+            html += `<div class="col-4 col-sm-3"><div class="dns-card form-check p-3 border rounded bg-white text-center" onclick="toggleDNS(${i})">
+                <input class="form-check-input dns-checkbox" type="checkbox" value="${i}" id="dns_${i}" style="transform:scale(1.5);">
+                <label class="d-block fw-bold mt-2 fs-4" for="dns_${i}">#${i}</label>
             </div></div>`;
         }
         document.getElementById('dnsList').innerHTML = html;
         document.getElementById('setupPanel').classList.add('d-none');
         document.getElementById('dnsPanel').classList.remove('d-none');
     }
-    function toggleDNS(id) {
-        let cb = document.getElementById('dns_'+id);
-        if(event.target !== cb) cb.checked = !cb.checked;
-    }
-    function backToSetup() {
-        document.getElementById('dnsPanel').classList.add('d-none');
-        document.getElementById('setupPanel').classList.remove('d-none');
-    }
+    function toggleDNS(id) { let cb = document.getElementById('dns_'+id); if(event.target !== cb) cb.checked = !cb.checked; }
+    function backToSetup() { document.getElementById('dnsPanel').classList.add('d-none'); document.getElementById('setupPanel').classList.remove('d-none'); }
+    
     function startCompetition() {
         let count = parseInt(document.getElementById('athleteCount').value);
         let dnsSet = new Set(Array.from(document.querySelectorAll('.dns-checkbox:checked')).map(cb=>parseInt(cb.value)));
@@ -340,11 +374,9 @@
             });
         }
         
-        document.getElementById('dnsPanel').classList.add('d-none');
+        document.getElementById('setupContainer').classList.add('d-none');
         document.getElementById('mainPanel').classList.remove('d-none');
-        document.getElementById('controlPanel').classList.remove('d-none');
         startHeightModalObj = new bootstrap.Modal(document.getElementById('startHeightModal'));
-        rankingModalObj = new bootstrap.Modal(document.getElementById('rankingModal'));
 
         renderTableStructure();
         renderTableRows();
@@ -352,61 +384,107 @@
         if(heightList.length > 0) autoSelectNext(heightList[0], -1);
     }
 
-    // --- 核心渲染 ---
     function renderTableStructure() {
         let thead = document.querySelector('#scoreTable thead');
         thead.innerHTML = '';
         let tr = document.createElement('tr');
         
-        // 1. 左側凍結：背號
-        let thBib = document.createElement('th');
-        thBib.className = 'sticky-col-left';
-        thBib.innerText = 'No.';
-        tr.appendChild(thBib);
+        let thBib = document.createElement('th'); thBib.className = 'sticky-col sticky-left'; thBib.innerText = 'No.'; tr.appendChild(thBib);
+        heightList.forEach(h => { let th = document.createElement('th'); th.textContent = h; tr.appendChild(th); });
         
-        // 2. 中間：高度
-        heightList.forEach(h => {
-            let th = document.createElement('th');
-            th.textContent = h;
-            tr.appendChild(th);
-        });
-
-        // 3. 右側凍結：最佳成績 (V13 更新)
-        let thBest = document.createElement('th');
-        thBest.className = 'sticky-col-right';
-        thBest.innerText = '最佳';
-        tr.appendChild(thBest);
+        let thBest = document.createElement('th'); thBest.className = 'sticky-col sticky-right-best'; thBest.innerText = '最佳'; tr.appendChild(thBest);
+        let thRank = document.createElement('th'); thRank.className = 'sticky-col sticky-right-rank'; thRank.innerText = '名次'; tr.appendChild(thRank);
         
         thead.appendChild(tr);
     }
 
+    function calculateLiveRanks() {
+        let tempAthletes = athletes.map(a => ({...a}));
+        // 只過濾掉 DNS，保留 ACTIVE, OUT, RETIRED
+        let rankingList = tempAthletes.filter(a => a.status !== 'DNS');
+        
+        rankingList.sort((a, b) => {
+             // 優先比較最佳高度
+             let hA = a.bestHeight || 0, hB = b.bestHeight || 0;
+             if (hB !== hA) return hB - hA;
+             // 如果都有成績且高度相同
+             if (hA > 0) {
+                 // 比較該高度失敗次數
+                 let failsA = (a.results[a.bestHeightStr]||[]).filter(r=>r==='X').length;
+                 let failsB = (b.results[b.bestHeightStr]||[]).filter(r=>r==='X').length;
+                 if (failsA !== failsB) return failsA - failsB;
+             }
+             // 最後比較總失敗次數
+             return a.totalFails - b.totalFails;
+        });
+
+        let rankMap = {};
+        let currentRank = 1, skip = 0;
+        let isFirstPlaceTied = false;
+
+        rankingList.forEach((a, index) => {
+            // 如果最佳高度為 0 (NM)，直接給 "-"
+            if (a.bestHeight === 0) {
+                rankMap[a.id] = "-";
+                return;
+            }
+
+            let rank = currentRank;
+            if (index > 0) {
+                let prev = rankingList[index-1];
+                
+                // 只有當前一個人也有成績時，才進行並列判斷
+                if (prev.bestHeight > 0) {
+                    let isTied = false;
+                    let hA = a.bestHeight || 0, hB = prev.bestHeight || 0;
+                    
+                    if (hA === hB) {
+                        let failsA = (a.results[a.bestHeightStr]||[]).filter(r=>r==='X').length;
+                        let failsB = (prev.results[prev.bestHeightStr]||[]).filter(r=>r==='X').length;
+                        if (failsA === failsB && a.totalFails === prev.totalFails) isTied = true;
+                    }
+
+                    if (isTied) { 
+                        rank = rankMap[prev.id]; 
+                        skip++; 
+                        if(rank === 1) isFirstPlaceTied = true; 
+                    } else { 
+                        currentRank = currentRank + 1 + skip; 
+                        rank = currentRank; 
+                        skip = 0; 
+                    }
+                } else {
+                    rank = 1;
+                }
+            }
+            rankMap[a.id] = rank;
+        });
+        return { map: rankMap, tieFirst: isFirstPlaceTied };
+    }
+
     function renderTableRows() {
+        let rankData = calculateLiveRanks();
+        let rankMap = rankData.map;
+
         let tbody = document.getElementById('scoreBody');
         tbody.innerHTML = '';
         
         athletes.forEach(a => {
             let tr = document.createElement('tr');
-            let rowColor = 'white'; // 預設背景
+            if (a.status === 'DNS') tr.className = 'row-dns';
+            else if (a.status === 'OUT' || a.status === 'RETIRED') tr.className = 'row-out';
+            else tr.className = 'row-active';
 
-            if(a.status === 'DNS') rowColor = '#f0f0f0';
-            else if(a.status !== 'ACTIVE') rowColor = '#ffe6e6';
-            
-            tr.style.backgroundColor = rowColor;
-
-            // 1. 左側凍結：背號
-            let bibHtml = a.status==='DNS' ? `${a.bib}<br><small>DNS</small>` : `#${a.bib}`;
-            let tdBib = document.createElement('td');
-            tdBib.className = 'sticky-col-left text-primary fs-5';
-            tdBib.style.backgroundColor = rowColor; // 必須手動設定背景色以遮擋捲動內容
-            tdBib.innerHTML = bibHtml;
+            let bibHtml = a.status==='DNS' ? `${a.bib}<br><small style="font-size:0.6rem">DNS</small>` : `#${a.bib}`;
+            let tdBib = document.createElement('td'); 
+            tdBib.className = 'sticky-col sticky-left text-primary fs-5 fw-bold'; 
+            tdBib.innerHTML = bibHtml; 
             tr.appendChild(tdBib);
 
-            // 2. 中間：成績格
             heightList.forEach(h => {
                 let td = document.createElement('td');
                 td.id = `cell_${a.id}_${h.replace('.','_')}`;
                 td.onclick = () => selectCell(a.id, h);
-
                 let attempts = a.results[h] || [];
                 let html = '';
                 attempts.forEach(res => {
@@ -418,26 +496,31 @@
                 tr.appendChild(td);
             });
 
-            // 3. 右側凍結：最佳成績 (V13 更新)
-            let displayBest = "";
-            let colorClass = "";
-            
-            if (a.status === 'DNS') {
-                displayBest = "DNS";
-                colorClass = "text-secondary";
-            } else if (a.bestHeightStr === "NM") {
-                displayBest = "NM";
-                colorClass = "text-danger";
-            } else {
-                displayBest = a.bestHeightStr;
-                colorClass = "text-dark";
-            }
-
-            let tdBest = document.createElement('td');
-            tdBest.className = `sticky-col-right fw-bold ${colorClass}`;
-            tdBest.style.backgroundColor = rowColor; // 必須手動設定背景色
-            tdBest.innerText = displayBest;
+            // 最佳高度顯示
+            let displayBest = (a.status === 'DNS') ? "-" : (a.bestHeightStr === "NM" ? "NM" : a.bestHeightStr);
+            let tdBest = document.createElement('td'); 
+            tdBest.className = 'sticky-col sticky-right-best fw-bold text-dark';
+            tdBest.innerText = displayBest; 
             tr.appendChild(tdBest);
+
+            // V22: 名次顯示修正 (只顯示 1-8，其他留白，NM/DNS 顯示 -)
+            let rankVal = rankMap[a.id];
+            let displayRank = "";
+
+            if (!rankVal || rankVal === "-") {
+                displayRank = "-"; // DNS or NM
+            } else if (typeof rankVal === 'number') {
+                if (rankVal <= 8) {
+                    displayRank = rankVal; // 1-8名
+                } else {
+                    displayRank = ""; // 9名(含)以後不顯示
+                }
+            }
+            
+            let tdRank = document.createElement('td');
+            tdRank.className = 'sticky-col sticky-right-rank';
+            tdRank.innerText = displayRank;
+            tr.appendChild(tdRank);
 
             tbody.appendChild(tr);
         });
@@ -449,26 +532,23 @@
     function scrollToSelection() {
         setTimeout(() => {
             let el = document.querySelector('.cell-selected');
-            if(el) el.scrollIntoView({behavior: "smooth", block: "nearest", inline: "center"});
+            if(el) { el.scrollIntoView({behavior: "smooth", block: "nearest", inline: "center"}); }
         }, 50);
     }
 
-    function selectCell(aid, height) {
-        selectedAthleteId = aid;
-        selectedHeight = height;
-        renderTableRows();
-    }
+    function selectCell(aid, height) { selectedAthleteId = aid; selectedHeight = height; renderTableRows(); }
 
-    // --- 邏輯功能 ---
     function updateControlPanel() {
         let dashHeight = document.getElementById('dashHeight');
         let dashBib = document.getElementById('dashBib');
         let dashAttempt = document.getElementById('dashAttempt');
         let setStartBtn = document.getElementById('btnSetStart');
         let btns = document.querySelectorAll('.btn-ctrl');
-        
+        let headerNextEl = document.getElementById('headerNextInfo');
+
         if (selectedAthleteId === null) {
             dashHeight.innerText = "--"; dashBib.innerText = "--"; dashAttempt.innerText = "--";
+            headerNextEl.innerHTML = "";
             setStartBtn.disabled = true; btns.forEach(b => b.disabled = true);
             return;
         }
@@ -480,27 +560,35 @@
         dashBib.innerText = `#${athlete.bib}`;
         let isClosed = attempts.includes('O') || attempts.includes('r') || (attempts.length>0 && attempts[attempts.length-1]==='-') || attempts.length >= 3;
         
-        if (isClosed) {
-            dashAttempt.innerText = "完"; dashAttempt.style.color = "#28a745";
-        } else {
-            dashAttempt.innerText = `第 ${attempts.length + 1} 跳`; dashAttempt.style.color = "#dc3545";
-        }
+        if (isClosed) { dashAttempt.innerText = "完"; dashAttempt.style.color = "#28a745"; } 
+        else { dashAttempt.innerText = `第 ${attempts.length + 1} 跳`; dashAttempt.style.color = "#dc3545"; }
         
         setStartBtn.disabled = (athlete.status === 'DNS');
-        if (athlete.status === 'DNS') btns.forEach(b => b.disabled = true);
+        if (athlete.status === 'DNS' || athlete.status === 'RETIRED' || athlete.status === 'OUT') btns.forEach(b => b.disabled = true);
         else btns.forEach(b => {
-             if(b.innerText.includes('倒退')) b.disabled = (attempts.length === 0);
+             if(b.innerText.includes('⎌')) b.disabled = (attempts.length === 0);
              else b.disabled = isClosed || athlete.status !== 'ACTIVE';
         });
+
+        let nextA = findNextCandidate(selectedHeight, selectedAthleteId);
+        if (nextA) {
+            let nextAttempts = (nextA.results[selectedHeight] || []).length + 1;
+            headerNextEl.innerHTML = `<small style="font-weight:normal; margin-right:4px;">下位:</small>#${nextA.bib} <small style="color:#666">(${nextAttempts})</small>`;
+        } else { headerNextEl.innerHTML = ""; }
     }
 
-    function undoResult() {
-        if (!selectedAthleteId || !selectedHeight) return;
-        let a = athletes.find(x => x.id === selectedAthleteId);
-        let r = a.results[selectedHeight];
-        if(r && r.length > 0) {
-            playSound('undo'); r.pop(); recalcAthleteStats(a); renderTableRows(); updateActiveCount();
-        }
+    function findNextCandidate(height, currentId) {
+        let startIndex = athletes.findIndex(a => a.id === currentId);
+        let next = null;
+        for(let i = startIndex + 1; i < athletes.length; i++) if (isEligible(athletes[i], height)) { next = athletes[i]; break; }
+        if (!next) for(let i = 0; i <= startIndex; i++) if (isEligible(athletes[i], height) && athletes[i].id !== currentId) { next = athletes[i]; break; }
+        return next;
+    }
+
+    function isEligible(a, h) {
+        if (a.status === 'DNS' || a.status === 'RETIRED' || a.status === 'OUT') return false;
+        let r = a.results[h] || [];
+        return !(r.includes('O') || r.includes('r') || (r.length>0 && r[r.length-1]==='-') || r.length >= 3);
     }
 
     function submitResult(res) {
@@ -515,12 +603,25 @@
             a.consecutiveFails = 0; a.bestHeightStr = selectedHeight; a.bestHeight = parseFloat(selectedHeight);
         } else if (res === 'X') {
             a.consecutiveFails++; a.totalFails++;
-            if(a.consecutiveFails >= 3) {
-                a.status = 'OUT'; setTimeout(()=>alert(`選手 #${a.bib} 淘汰！`), 100);
-            }
-        } else if (res === 'r') a.status = 'RETIRED';
+            if(a.consecutiveFails >= 3) { a.status = 'OUT'; setTimeout(()=>alert(`選手 #${a.bib} 淘汰！`), 100); }
+        } else if (res === 'r') { a.status = 'RETIRED'; }
         
-        renderTableRows(); updateActiveCount(); autoSelectNext(selectedHeight, a.id);
+        renderTableRows(); updateActiveCount(); checkGameEnd();
+        
+        if (a.status === 'ACTIVE' && res === 'X' && a.consecutiveFails < 3) {
+             let nextPerson = findNextCandidate(selectedHeight, a.id);
+             if (nextPerson) selectCell(nextPerson.id, selectedHeight); else selectCell(a.id, selectedHeight);
+        } else { autoSelectNext(selectedHeight, a.id); }
+    }
+
+    function undoResult() {
+        if (!selectedAthleteId || !selectedHeight) return;
+        let a = athletes.find(x => x.id === selectedAthleteId);
+        let r = a.results[selectedHeight];
+        if(r && r.length > 0) {
+            r.pop(); playSound('undo'); recalcAthleteStats(a); 
+            renderTableRows(); updateActiveCount(); checkGameEnd();
+        }
     }
 
     function recalcAthleteStats(a) {
@@ -540,11 +641,7 @@
     }
 
     function autoSelectNext(height, currentId) {
-        let startIndex = athletes.findIndex(a => a.id === currentId);
-        let nextAthlete = null;
-        for(let i = startIndex + 1; i < athletes.length; i++) if (isEligible(athletes[i], height)) { nextAthlete = athletes[i]; break; }
-        if (!nextAthlete) for(let i = 0; i <= startIndex; i++) if (isEligible(athletes[i], height)) { nextAthlete = athletes[i]; break; }
-        
+        let nextAthlete = findNextCandidate(height, currentId);
         if (nextAthlete) selectCell(nextAthlete.id, height);
         else {
             let currentHIndex = heightList.indexOf(height);
@@ -554,12 +651,6 @@
                 if (firstInNext) selectCell(firstInNext.id, nextHeight); else { selectedAthleteId = null; renderTableRows(); }
             } else { selectedAthleteId = null; renderTableRows(); }
         }
-    }
-
-    function isEligible(a, h) {
-        if (a.status !== 'ACTIVE') return false;
-        let r = a.results[h] || [];
-        return !(r.includes('O') || r.includes('r') || (r.length>0 && r[r.length-1]==='-') || r.length >= 3);
     }
 
     function openStartHeightModalFromControl() {
@@ -588,46 +679,6 @@
         if(selectedHeight) autoSelectNext(selectedHeight, selectedAthleteId || -1);
     }
 
-    function showRanking() {
-        let list = athletes.filter(a => a.status !== 'DNS');
-        list.sort((a, b) => {
-            let hA = a.bestHeight || 0, hB = b.bestHeight || 0;
-            if (hB !== hA) return hB - hA;
-            if (hA > 0) {
-                let failsA = (a.results[a.bestHeightStr]||[]).filter(r=>r==='X').length;
-                let failsB = (b.results[b.bestHeightStr]||[]).filter(r=>r==='X').length;
-                if (failsA !== failsB) return failsA - failsB;
-            }
-            return a.totalFails - b.totalFails;
-        });
-        let tbody = document.getElementById('rankingBody'); tbody.innerHTML = '';
-        let currentDisplayRank = 1;
-        list.forEach((a, i) => {
-            let displayRank = currentDisplayRank;
-            if (i > 0) {
-                let prev = list[i-1];
-                let isTied = false;
-                let hA = a.bestHeight || 0, hB = prev.bestHeight || 0;
-                if (hA === hB) {
-                    if (hA === 0) isTied = true;
-                    else {
-                        let failsA = (a.results[a.bestHeightStr]||[]).filter(r=>r==='X').length;
-                        let failsB = (prev.results[prev.bestHeightStr]||[]).filter(r=>r==='X').length;
-                        if (failsA === failsB && a.totalFails === prev.totalFails) isTied = true;
-                    }
-                }
-                if (isTied) displayRank = tbody.lastChild.firstChild.innerText;
-                else { displayRank = i + 1; currentDisplayRank = i + 1; }
-            } else { displayRank = 1; currentDisplayRank = 1; }
-            
-            let note = a.bestHeightStr === "NM" ? '<span class="text-danger small">NM</span>' : ''; 
-            if(a.status === 'OUT' && a.bestHeightStr !== "NM") note = '<small class="text-danger">(OUT)</small>';
-            
-            tbody.innerHTML += `<tr><td class="fw-bold fs-5">${displayRank}</td><td class="fw-bold">#${a.bib}</td><td>${a.bestHeightStr}</td><td>${note}</td></tr>`;
-        });
-        rankingModalObj.show();
-    }
-
     function openAddHeightModal() {
         let valStr = prompt("新增高度 (如 205 = 2.05):");
         if(valStr) {
@@ -639,6 +690,15 @@
         }
     }
     function updateActiveCount() { document.getElementById('activeCount').innerText = athletes.filter(a => a.status === 'ACTIVE').length; }
+
+    function checkGameEnd() {
+        let activeCount = athletes.filter(a => a.status === 'ACTIVE').length;
+        if (activeCount === 0) {
+            let rankData = calculateLiveRanks();
+            if (rankData.tieFirst) { setTimeout(() => alert("⚠️ 比賽結束！\n出現並列第一，請進行 PK (Jump-off)！"), 500); } 
+            else { setTimeout(() => alert("🏁 比賽結束！請查看最終排名。"), 500); }
+        }
+    }
 </script>
 </body>
 </html>
